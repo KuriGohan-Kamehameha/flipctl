@@ -1,0 +1,49 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+*.ehpk
+*.apk
+*.aab
+
+# Android / Gradle
+.gradle/
+**/local.properties
+**/.cxx/
+**/captures/
+**/release/
+**/build/
+**/keystore.properties
+*.keystore
+*.jks
+*.iml
+
+# Capacitor
+www/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Misc
+*.log
+.cache/
+.tmp/

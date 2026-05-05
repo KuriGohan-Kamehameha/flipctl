@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flipctl Bridge</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: #181818;
+        color: #E5E5E5;
+        font: 15px/1.4 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      }
+      #app {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 24px;
+      }
+      h1 { font-size: 20px; margin: 0; }
+      .row { display: flex; gap: 12px; align-items: center; }
+      .dot {
+        width: 12px; height: 12px; border-radius: 50%;
+        background: #555;
+      }
+      .dot.ok { background: #4ade80; }
+      .dot.warn { background: #fbbf24; }
+      .dot.bad { background: #ef4444; }
+      pre {
+        margin: 0; padding: 12px;
+        background: #232323; border-radius: 8px;
+        font: 12px/1.4 ui-monospace, Menlo, monospace;
+        max-height: 50vh; overflow: auto;
+        white-space: pre-wrap;
+      }
+      .muted { color: #999; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <h1>Flipctl Bridge</h1>
+      <div class="row">
+        <div id="dot" class="dot"></div>
+        <div id="status">checking…</div>
+      </div>
+      <div class="muted">listening on <code>http://127.0.0.1:8765</code></div>
+      <pre id="log">[boot]</pre>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

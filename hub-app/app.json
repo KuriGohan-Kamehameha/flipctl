@@ -1,0 +1,19 @@
+{
+  "package_id": "com.sat.flipctl",
+  "edition": "202601",
+  "name": "Flipctl",
+  "version": "1.0.0",
+  "min_app_version": "2.0.0",
+  "min_sdk_version": "0.0.10",
+  "entrypoint": "index.html",
+  "permissions": [
+    {
+      "name": "network",
+      "desc": "Connects to the local Flipctl Bridge on the phone (loopback only) to relay BLE commands to the user's Flipper Zero. No remote endpoints are contacted.",
+      "whitelist": [
+        "http://127.0.0.1:8765"
+      ]
+    }
+  ],
+  "supported_languages": ["en"]
+}
