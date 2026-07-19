@@ -26,18 +26,25 @@ loopback-only HTTP API on `127.0.0.1:8765`.
 | [`phone-bridge/`](phone-bridge) | Capacitor + Android foreground service, NanoHTTPD on :8765, qFlipper-style BLE Serial RPC | working — mirror, favourites, app start/exit, screen stream |
 | [`flipper-app/`](flipper-app)  | Flipper Zero ufbt C app (legacy)                                | **abandoned** — kept as a base for the future scan-trigger FAP |
 
-## Features (v1.0)
+## Features
 
-- **Live screen mirror** — Flipper's 128×64 OLED scaled to 192×96 on the HUD,
-  rendered at 70% brightness.
+- **Home menu launcher** — opens to a four-item home screen (Favourites,
+  Mirror, Standby Mode, Settings) instead of dropping you straight into the
+  mirror. Four-plus taps from any screen returns to home.
+- **Live screen mirror** — Flipper's 128×64 OLED scaled to 256×128 on the
+  HUD (clean 2× integer upscale, no aliasing) at 70% brightness. Position
+  configurable from Settings: top-left/top-middle/top-right, centre, or
+  bottom-left/bottom-middle/bottom-right.
 - **Ring as remote** — the R1 ring acts as a D-pad/OK/Back for whatever
   Flipper UI is foreground.
-- **Favourites picker** — 4+ rapid taps opens a menu of every entry in
-  `/ext/favorites.txt`. One tap fires the right app: `.sub`/`.ir` transmit on
-  load, `.nfc`/`.rfid`/`.ibtn` enter emulation-armed state, `.fap` launches
-  directly.
-- **Recovery** — built-in "Exit Flipper app" item drops the foreground app
-  back to the desktop so the next launch starts cleanly.
+- **Favourites picker** — every entry in `/ext/favorites.txt`, one tap to
+  fire: `.sub`/`.ir` transmit on load, `.nfc`/`.rfid`/`.ibtn` enter
+  emulation-armed state, `.fap` launches directly.
+- **Standby Mode** — minimises the HUD to a tiny "<favourite>  READY"
+  legend in a configurable corner. One tap fires; tap again to re-fire and
+  dismiss the app, or double-tap to dismiss without firing again.
+- **Recovery** — built-in "Exit Flipper app" item under Favourites drops
+  the foreground app back to the desktop so the next launch starts cleanly.
 
 ## Why no scanner shortcuts in v1.0
 
@@ -81,17 +88,21 @@ cd ../hub-app && npm run pack
 
 ## Gestures
 
-| State        | Gesture            | Action                         |
-|--------------|--------------------|--------------------------------|
-| Mirror mode  | 1 tap              | Send OK to Flipper             |
-|              | 2 taps             | Send LEFT                      |
-|              | 3 taps             | Send RIGHT                     |
-|              | 4+ taps            | Open favourites menu           |
-|              | Scroll up/down     | Send UP/DOWN                   |
-|              | Text double-click  | Send BACK                      |
-| Menu mode    | 1 tap              | Pick highlighted item          |
-|              | 2+ taps            | Close menu                     |
-|              | Scroll up/down     | Move cursor (skips separators) |
+| State         | Gesture            | Action                                      |
+|---------------|--------------------|---------------------------------------------|
+| Any menu      | 1 tap              | Pick highlighted item                       |
+|               | 2+ taps            | Back / close menu                           |
+|               | Scroll up/down     | Move cursor (skips separators)              |
+|               | Text double-click  | Back / close menu                           |
+| Mirror        | 1 tap              | Send OK to Flipper                          |
+|               | 2 taps             | Send LEFT                                   |
+|               | 3 taps             | Send RIGHT                                  |
+|               | 4+ taps            | Return to home menu                         |
+|               | Scroll up/down     | Send UP/DOWN                                |
+|               | Text double-click  | Send BACK                                   |
+| Standby       | 1 tap (first)      | Fire the armed favourite (legend → FIRED)   |
+|               | 1 tap (after fire) | Fire again, then dismiss the app            |
+|               | 2+ taps            | Dismiss the app                             |
 
 ## Bridge HTTP API
 
