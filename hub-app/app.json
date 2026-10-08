@@ -2,9 +2,9 @@
   "package_id": "com.sat.flipctl",
   "edition": "202601",
   "name": "Flipctl",
-  "version": "1.0.0",
-  "min_app_version": "2.0.0",
-  "min_sdk_version": "0.0.10",
+  "version": "1.1.0",
+  "min_app_version": "2.2.10",
+  "min_sdk_version": "0.0.16",
   "entrypoint": "index.html",
   "permissions": [
     {

@@ -1,5 +1,6 @@
 import type { Command } from '../commands'
 import type { Transport, TransportResult } from './types'
+import { devlog } from '../devlog'
 
 // Phone-resident bridge: a process on the same device (phone) that owns the
 // BLE link to the Flipper Zero. The Hub app POSTs commands to it.
@@ -33,9 +34,11 @@ export class HttpTransport implements Transport {
       const res = await this.fetchWithTimeout(`${this.baseUrl}/health`, { method: 'GET' })
       if (!res.ok) throw new Error(`/health ${res.status} @ ${this.baseUrl}`)
       this.connected = true
+      devlog('connect.ok', { baseUrl: this.baseUrl, status: res.status })
     } catch (e) {
       // Re-throw with the bridge URL so the failure is debuggable from the HUD.
       const msg = (e as Error).message || 'fetch failed'
+      devlog('connect.error', { baseUrl: this.baseUrl, error: msg })
       throw new Error(`${this.baseUrl}: ${msg}`)
     }
   }
@@ -56,8 +59,10 @@ export class HttpTransport implements Transport {
       })
       const body = await res.json().catch(() => ({}))
       const message = (body && typeof body.message === 'string') ? body.message : `${cmd.kind} ${res.status}`
+      devlog('send', { kind: cmd.kind, arg: cmd.arg ?? null, status: res.status, ok: res.ok, message })
       return { ok: res.ok, message }
     } catch (e) {
+      devlog('send.error', { kind: cmd.kind, arg: cmd.arg ?? null, error: (e as Error).message })
       return { ok: false, message: `${this.baseUrl}: ${(e as Error).message}` }
     }
   }

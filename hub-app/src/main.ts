@@ -6,13 +6,16 @@ import {
   ImageRawDataUpdate,
   CreateStartUpPageContainer,
   RebuildPageContainer,
+  MenuContainerProperty,
+  MenuItemProperty,
   OsEventTypeList,
 } from '@evenrealities/even_hub_sdk'
 
 import {
-  INPUT_UP, INPUT_DOWN, INPUT_LEFT, INPUT_RIGHT, INPUT_OK, INPUT_BACK,
+  INPUT_UP, INPUT_DOWN, INPUT_LEFT, INPUT_RIGHT, INPUT_OK, INPUT_BACK, INPUT_LONG_BACK,
   type Command,
 } from './commands'
+import { devlog } from './devlog'
 import { pickTransport, type Transport } from './transport'
 import { flipperFrameToPng, MIRROR_W, MIRROR_H } from './screen'
 import {
@@ -48,6 +51,36 @@ const transport: Transport = pickTransport()
 const debugTimings = new URLSearchParams(location.search).get('debug') === '1'
 
 const bridge = await waitForEvenAppBridge()
+devlog('boot', { href: location.href, ua: navigator.userAgent })
+bridge.onLaunchSource(source => devlog('launchSource', source))
+
+// ── Contextual menu (double-tap-and-hold on the glasses) ─────────────────
+// Registered with every page build; the OS renders it and reports a click as
+// menuItemClickEvent. IDs are stable, names stay within the 32-byte limit.
+const MENU_FAVOURITES  = 1
+const MENU_MIRROR      = 2
+const MENU_STANDBY     = 3
+const MENU_SETTINGS    = 4
+const MENU_FLIP_BACK   = 5
+const MENU_FLIP_LBACK  = 6
+const MENU_FLIP_EXIT   = 7
+const MENU_EXIT        = 8
+
+function contextMenu(): MenuContainerProperty {
+  const item = (itemID: number, itemName: string) => new MenuItemProperty({ itemID, itemName })
+  return new MenuContainerProperty({
+    menuItems: [
+      item(MENU_FAVOURITES, 'Favourites'),
+      item(MENU_MIRROR,     'Mirror'),
+      item(MENU_STANDBY,    'Standby mode'),
+      item(MENU_SETTINGS,   'Settings'),
+      item(MENU_FLIP_BACK,  'Flipper: Back'),
+      item(MENU_FLIP_LBACK, 'Flipper: Long back'),
+      item(MENU_FLIP_EXIT,  'Exit Flipper app'),
+      item(MENU_EXIT,       'Exit Flipctl'),
+    ],
+  })
+}
 
 // ── View state machine ───────────────────────────────────────────────────
 interface FavoriteRow { name: string; path: string; app: string }
@@ -176,11 +209,13 @@ async function applyView(view: View): Promise<void> {
   }
 
   const total = textObject.length + (imageObject?.length ?? 0)
-  await bridge.rebuildPageContainer(new RebuildPageContainer({
+  const rebuilt = await bridge.rebuildPageContainer(new RebuildPageContainer({
     containerTotalNum: total,
     textObject,
     imageObject,
+    menuObject: contextMenu(),
   }))
+  devlog('rebuild', { view: view.kind, containers: total, ok: rebuilt })
 
   if (view.kind === 'mirror') {
     lastStatus = ' '
@@ -609,13 +644,15 @@ async function handleTaps(final: number): Promise<void> {
 void (async () => {
   // First-time page must use createStartUpPageContainer; subsequent layouts
   // come from rebuildPageContainer via applyView.
-  await bridge.createStartUpPageContainer(new CreateStartUpPageContainer({
+  const created = await bridge.createStartUpPageContainer(new CreateStartUpPageContainer({
     containerTotalNum: 2,
     textObject: [
       eventCapture(),
       fullCanvasText(ID_MAIN, 'Flipctl\n\nstarting…'),
     ],
+    menuObject: contextMenu(),
   }))
+  devlog('startup', { result: created })
 
   void fetcherLoop()
   void rendererLoop()
@@ -640,8 +677,34 @@ void (async () => {
   }
 })()
 
+// ── Contextual menu actions ─────────────────────────────────────────────
+async function onMenuItem(itemID: number): Promise<void> {
+  switch (itemID) {
+    case MENU_FAVOURITES: return openFavouritesMenu()
+    case MENU_MIRROR:     return enterMirror()
+    case MENU_STANDBY:    return openStandbyPicker()
+    case MENU_SETTINGS:   return openSettingsMenu()
+    case MENU_FLIP_BACK:  await transport.send(INPUT_BACK).catch(() => undefined); return
+    case MENU_FLIP_LBACK: await transport.send(INPUT_LONG_BACK).catch(() => undefined); return
+    case MENU_FLIP_EXIT:  await transport.send({ id: 'xa', kind: 'app.exit', label: '' }).catch(() => undefined); return
+    case MENU_EXIT:       return exitApp()
+    default:              return
+  }
+}
+
+// A sustained press is "back": close a menu, or send BACK to the Flipper from
+// the mirror. Standby ignores it so a resting finger cannot dismiss the legend.
+async function onLongPress(): Promise<void> {
+  if (currentView.kind === 'menu') return currentView.menu.back()
+  if (currentView.kind === 'standby') return
+  await transport.send(INPUT_BACK).catch(() => undefined)
+}
+
 // ── Event subscription ──────────────────────────────────────────────────
 const unsubscribe = bridge.onEvenHubEvent(async event => {
+  devlog('event', event)
+  const menuID = event.menuItemClickEvent?.itemID
+  if (typeof menuID === 'number') { void onMenuItem(menuID); return }
   if (event.sysEvent) {
     const t = event.sysEvent.eventType ?? OsEventTypeList.CLICK_EVENT
     if (t === OsEventTypeList.SYSTEM_EXIT_EVENT || t === OsEventTypeList.ABNORMAL_EXIT_EVENT) {
@@ -651,6 +714,8 @@ const unsubscribe = bridge.onEvenHubEvent(async event => {
     }
     if (t === OsEventTypeList.CLICK_EVENT)        { recordTaps(1); return }
     if (t === OsEventTypeList.DOUBLE_CLICK_EVENT) { recordTaps(2); return }
+    if (t === OsEventTypeList.LONG_PRESS_EVENT)   { void onLongPress(); return }
+    if (t === OsEventTypeList.LONG_PRESS_RELEASE_EVENT) return
   }
   if (event.textEvent) {
     const t = event.textEvent.eventType ?? OsEventTypeList.CLICK_EVENT

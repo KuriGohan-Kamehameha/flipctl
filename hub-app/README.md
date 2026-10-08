@@ -36,16 +36,22 @@ BLE Serial channel and exposes a localhost-only HTTP API on `127.0.0.1:8765`.
 
 | State        | Gesture                | Action                         |
 |--------------|------------------------|--------------------------------|
+| Any          | Double-tap and hold    | Glasses contextual menu: Favourites, Mirror, Standby mode, Settings, Flipper: Back, Flipper: Long back, Exit Flipper app, Exit Flipctl |
 | Mirror mode  | 1 tap                  | Send OK to Flipper             |
 |              | 2 taps                 | Send LEFT                      |
 |              | 3 taps                 | Send RIGHT                     |
-|              | 4+ taps                | Open favourites menu           |
+|              | 4+ taps                | Open home menu                 |
 |              | Scroll up/down         | Send UP/DOWN                   |
-|              | Text double-click      | Send BACK                      |
+|              | Long press             | Send BACK                      |
 | Menu mode    | 1 tap                  | Pick highlighted item          |
-|              | 2+ taps                | Close menu (back to mirror)    |
+|              | 2+ taps / long press   | Close menu                     |
 |              | Scroll up/down         | Move cursor (skips separators) |
-|              | Text double-click      | Close menu                     |
+| Standby      | 1 tap                  | Fire the favourite (again to dismiss) |
+|              | 2 taps                 | Dismiss                        |
+
+Requires Even App 2.2.10 or newer (SDK 0.0.16): the contextual menu and
+long-press events do not exist on older hosts, and the 2.3.x host no longer
+delivers taps to pages built against SDK 0.0.10.
 
 ## URL parameters
 
