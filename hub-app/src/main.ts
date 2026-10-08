@@ -96,6 +96,7 @@ interface MenuView {
   items: MenuItem[]
   cursor: number
   back: () => Promise<void>  // 2+ taps or text-double-click closes the menu
+  root?: boolean             // the top-level menu: double-tap exits via the OS dialog
 }
 
 type View =
@@ -413,6 +414,7 @@ function makeBootMenu(message: string): MenuView {
   return {
     title: 'Flipctl',
     cursor: 0,
+    root: true,
     back: async () => { /* noop */ },
     items: [{ label: message, selectable: false }],
   }
@@ -425,7 +427,7 @@ function homeMenu(): MenuView {
     { label: 'Standby Mode', selectable: true, action: openStandbyPicker },
     { label: 'Settings',     selectable: true, action: openSettingsMenu },
   ]
-  return { title: 'Flipctl', cursor: firstSelectable(items), items, back: async () => { /* root */ } }
+  return { title: 'Flipctl', cursor: firstSelectable(items), items, root: true, back: async () => { /* root */ } }
 }
 
 async function openHome(): Promise<void> {
@@ -583,6 +585,21 @@ async function exitApp(): Promise<void> {
   try { await bridge.shutDownPageContainer(0) } catch { /* ignore */ }
 }
 
+// Root-page exit: hand control to the OS so it shows the system exit dialog
+// (shutDownPageContainer mode 1), which the store review requires of a
+// root-page double-tap. Non-root pages close back toward the root instead.
+async function systemExit(): Promise<void> {
+  try { await stopStream() } catch { /* ignore */ }
+  try { await bridge.shutDownPageContainer(1) } catch { /* ignore */ }
+}
+
+// A 2+-tap / double-click / long-press on a menu: exit via the OS dialog at
+// the root, otherwise step back one level.
+async function closeMenu(menu: MenuView): Promise<void> {
+  if (menu.root) return systemExit()
+  return menu.back()
+}
+
 async function fetchFavorites(): Promise<FavoriteRow[]> {
   if (transport.name !== 'http') return []
   const baseUrl = (transport as { baseUrl?: string }).baseUrl ?? 'http://127.0.0.1:8765'
@@ -614,7 +631,7 @@ function recordTaps(n: number): void {
 async function handleTaps(final: number): Promise<void> {
   if (currentView.kind === 'menu') {
     if (final === 1) return menuSelect()
-    return currentView.menu.back()
+    return closeMenu(currentView.menu)
   }
 
   if (currentView.kind === 'standby') {
@@ -672,7 +689,7 @@ void (async () => {
       }},
     ]
     await applyView({ kind: 'menu', menu: {
-      title: 'Flipctl', cursor: firstSelectable(items), items, back: async () => { /* noop */ },
+      title: 'Flipctl', cursor: firstSelectable(items), items, root: true, back: async () => { /* noop */ },
     }})
   }
 })()
@@ -695,7 +712,7 @@ async function onMenuItem(itemID: number): Promise<void> {
 // A sustained press is "back": close a menu, or send BACK to the Flipper from
 // the mirror. Standby ignores it so a resting finger cannot dismiss the legend.
 async function onLongPress(): Promise<void> {
-  if (currentView.kind === 'menu') return currentView.menu.back()
+  if (currentView.kind === 'menu') return closeMenu(currentView.menu)
   if (currentView.kind === 'standby') return
   await transport.send(INPUT_BACK).catch(() => undefined)
 }
@@ -722,7 +739,7 @@ const unsubscribe = bridge.onEvenHubEvent(async event => {
     if (currentView.kind === 'menu') {
       if (t === OsEventTypeList.SCROLL_TOP_EVENT)    { void menuMove(-1); return }
       if (t === OsEventTypeList.SCROLL_BOTTOM_EVENT) { void menuMove(+1); return }
-      if (t === OsEventTypeList.DOUBLE_CLICK_EVENT)  { void currentView.menu.back(); return }
+      if (t === OsEventTypeList.DOUBLE_CLICK_EVENT)  { void closeMenu(currentView.menu); return }
       return
     }
     if (currentView.kind === 'standby') {
