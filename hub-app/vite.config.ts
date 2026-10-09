@@ -16,10 +16,37 @@ function prototypeDevServer(): Plugin {
     name: 'flipctl-prototype-dev-server',
     apply: 'serve',
     configureServer(server) {
+      // POST only, with a hard byte ceiling enforced before buffering or
+      // writing. The dev server binds every interface (server.host: true), so
+      // any LAN client can reach this route; an unbounded body would otherwise
+      // grow memory and the on-disk log without limit. A chunk count is not a
+      // byte limit — one chunk can be arbitrarily large — so bound the bytes.
+      const MAX_DEVLOG_BYTES = 64 * 1024
       server.middlewares.use('/__log', (req: IncomingMessage, res: ServerResponse) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          res.setHeader('allow', 'POST')
+          res.end()
+          return
+        }
         const chunks: Buffer[] = []
-        req.on('data', (c: Buffer) => { if (chunks.length < 64) chunks.push(c) })
+        let total = 0
+        let overflow = false
+        req.on('data', (c: Buffer) => {
+          if (overflow) return
+          total += c.length
+          if (total > MAX_DEVLOG_BYTES) {
+            // Over the ceiling: refuse before buffering or writing any more.
+            overflow = true
+            res.statusCode = 413
+            res.end()
+            req.destroy()
+            return
+          }
+          chunks.push(c)
+        })
         req.on('end', () => {
+          if (overflow) return
           const line = Buffer.concat(chunks).toString('utf8').replace(/\r?\n/g, ' ')
           const stamped = `${new Date().toISOString()} ${line}\n`
           try { appendFileSync(logPath, stamped) } catch { /* the terminal line still shows it */ }

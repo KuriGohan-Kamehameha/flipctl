@@ -44,7 +44,7 @@ BLE Serial channel and exposes a localhost-only HTTP API on `127.0.0.1:8765`.
 |              | Scroll up/down         | Send UP/DOWN                   |
 |              | Long press             | Send BACK                      |
 | Menu mode    | 1 tap                  | Pick highlighted item          |
-|              | 2+ taps / long press   | Close menu                     |
+|              | 2+ taps / long press   | Sub-menu: close and return to the parent. Root/home menu: open the OS exit prompt (`shutDownPageContainer(1)`), which quits the app on confirm |
 |              | Scroll up/down         | Move cursor (skips separators) |
 | Standby      | 1 tap                  | Fire the favourite (again to dismiss) |
 |              | 2 taps                 | Dismiss                        |
